@@ -11,8 +11,8 @@ export class GridController {
   service: GridService;
 
   @get('/')
-  async getAccountInfo(): Promise<void> {
-    const res = await this.service.GetAccountInfo();
+  async Run(): Promise<void> {
+    const res = await this.service.Run();
     this.ctx.body = res;
   }
 }
