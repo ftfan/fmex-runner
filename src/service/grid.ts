@@ -24,11 +24,11 @@ const BtcSymbol = 'btcusd_p';
 const UserParams = {
   MinPrice: -100,
   MinPosition: 1000,
-  MaxPrice: 500,
+  MaxPrice: 400,
   MaxPosition: -200,
   AutoPrice: true,
-  MaxStepVol: 10, // 每次下单最多不能超过该金额
-  OverStepChange: 5,
+  MaxStepVol: 100, // 每次下单最多不能超过该金额
+  OverStepChange: 3,
 };
 
 const ks = UserConfig.KeySecret;
