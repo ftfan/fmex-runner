@@ -117,10 +117,23 @@ export class GridService {
         }
       }
       const cache = OssFileCache[key];
-      cache.data.push(OutPut);
 
-      // 因为执行太过频繁。这里保存数据有一定的延迟
-      cache.Saver(cache.keyPath, cache.data);
+      const IsSameData = () => {
+        const last = cache.data[cache.data.length - 1];
+        if (!last) return false;
+        const keys = ['p24h', 'Price', 'BtcSum', 'UsdSum', 'quantity', 'WantPos'];
+        for (const i in keys) {
+          const val = keys[i];
+          if (OutPut[val] !== last[val]) return false;
+        }
+        return true;
+      };
+      // 数据如果和上一次没有差别，就不保存了。有差异才保存
+      if (!IsSameData()) {
+        cache.data.push(OutPut);
+        // 因为执行太过频繁。这里保存数据有一定的延迟
+        cache.Saver(cache.keyPath, cache.data);
+      }
 
       return new CodeObj(Code.Success, OutPut);
     };
