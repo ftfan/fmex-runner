@@ -102,19 +102,18 @@ export class GridService {
       const keyPath = `${key}/${DateFormat(Date.now(), 'yyyy/MM/dd')}.json`;
       OssFileCache[key] = OssFileCache[key] || {};
       if (OssFileCache[key].keyPath !== keyPath) {
-        OssFileCache[key] = {
-          data: [],
-          keyPath,
-          Saver: lodash.throttle((key: string, data: any) => {
-            this.oss.put(key, data, {});
-          }, 60000),
-        };
-
         // 没有 路径，表明这个字段是首次建立，这里意味着是程序刚启动，所以需要加载oss文件数据，避免被覆盖
         if (!OssFileCache[key].keyPath) {
           const temp = await this.oss.get(keyPath);
           OssFileCache[key].data = temp || [];
         }
+        OssFileCache[key] = {
+          data: OssFileCache[key].data || [],
+          keyPath,
+          Saver: lodash.throttle((key: string, data: any) => {
+            this.oss.put(key, data, {});
+          }, 60000),
+        };
       }
       const cache = OssFileCache[key];
 
