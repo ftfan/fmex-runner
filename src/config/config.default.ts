@@ -1,4 +1,5 @@
 import { EggAppConfig, EggAppInfo, PowerPartial } from 'midway';
+import { UserConfig } from '../config';
 
 export type DefaultConfig = PowerPartial<EggAppConfig>;
 
@@ -24,8 +25,8 @@ export default (appInfo: EggAppInfo) => {
   };
 
   config.alinode = {
-    appid: '',
-    secret: '',
+    appid: UserConfig.alinode.appid,
+    secret: UserConfig.alinode.secret,
     error_log: [
       // '~/logs/fmex-runner/common-error.json.log.2020-08-06',
       '~/logs/fmex-runner/common-error.log',

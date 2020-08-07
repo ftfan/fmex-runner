@@ -2,6 +2,7 @@ import { provide, inject, Context } from 'midway';
 import { FMex } from '../lib/fmex';
 import BigNumber from 'bignumber.js';
 import { CodeObj, Code } from '../lib/Code';
+import { UserConfig } from '../config';
 
 const fmex = new FMex.Api();
 const Num0 = new BigNumber(0);
@@ -30,10 +31,7 @@ const UserParams = {
   OverStepChange: 5,
 };
 
-const ks = {
-  Key: '',
-  Secret: '',
-};
+const ks = UserConfig.KeySecret;
 
 const OrderReqCache: any = {};
 
