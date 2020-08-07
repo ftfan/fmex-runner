@@ -13,7 +13,6 @@ export default (appInfo: EggAppInfo) => {
 
   config.logger = {
     level: 'ALL',
-    outputJSON: true,
   };
 
   config.cluster = {
@@ -27,6 +26,23 @@ export default (appInfo: EggAppInfo) => {
   config.alinode = {
     appid: '',
     secret: '',
+    error_log: [
+      // '~/logs/fmex-runner/common-error.json.log.2020-08-06',
+      '~/logs/fmex-runner/common-error.log',
+      // '~/logs/fmex-runner/common-error.log.2020-08-06',
+      // '~/logs/fmex-runner/egg-schedule.json.log.2020-08-06',
+      '~/logs/fmex-runner/egg-schedule.log',
+      // '~/logs/fmex-runner/egg-schedule.log.2020-08-06',
+      '~/logs/fmex-runner/midway-agent.log',
+      // '~/logs/fmex-runner/midway-agent.log.2020-08-06',
+      // '~/logs/fmex-runner/midway-core.json.log.2020-08-06',
+      '~/logs/fmex-runner/midway-core.log',
+      // '~/logs/fmex-runner/midway-core.log.2020-08-06',
+      // '~/logs/fmex-runner/midway-web.json.log.2020-08-06',
+      '~/logs/fmex-runner/midway-web.log',
+      // '~/logs/fmex-runner/midway-web.log.2020-08-06',
+    ],
+    packages: ['~/fmex-runner/package.json'],
   };
 
   return config;
