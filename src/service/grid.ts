@@ -88,7 +88,7 @@ export class GridService {
 
     const OutPut = {
       Ts: Date.now(),
-      p24h: new BigNumber(ticker.Data.ticker[9]).dividedBy(ticker.Data.ticker[10]).toNumber(),
+      p24h: Math.floor(new BigNumber(ticker.Data.ticker[9]).dividedBy(ticker.Data.ticker[10]).multipliedBy(100).toNumber()) / 100,
       Price: BtcPrice,
       BtcSum: BtcSum.toNumber() || 0,
       UsdSum: UsdSum.toNumber() || 0,
