@@ -3,6 +3,9 @@ import { FMex } from '../lib/fmex';
 import BigNumber from 'bignumber.js';
 import { CodeObj, Code } from '../lib/Code';
 import { UserConfig } from '../config';
+import { MD5, DateFormat } from '../lib/utils';
+import { OssService } from './oss';
+import * as lodash from 'lodash';
 
 const fmex = new FMex.Api();
 const Num0 = new BigNumber(0);
@@ -34,23 +37,39 @@ const UserParams = {
 const ks = UserConfig.KeySecret;
 
 const OrderReqCache: any = {};
+const OssFileCache: any = {};
 
 @provide('gridService')
 export class GridService {
   @inject()
   ctx: Context;
 
+  @inject('ossService')
+  oss: OssService;
+
   async Run() {
-    const [pos, balance, ticker, orders] = await Promise.all([fmex.FetchPosition(ks), fmex.FetchBalance(ks), fmex.GetTicker(BtcSymbol), fmex.Orders(ks)]);
+    const [pos, balance, ticker, orders] = await Promise.all([
+      // 获取行情数据
+      fmex.FetchPosition(ks),
+      fmex.FetchBalance(ks),
+      fmex.GetTicker(BtcSymbol),
+      fmex.Orders(ks),
+    ]);
     if (pos.Error()) return pos;
     if (balance.Error()) return balance;
     if (ticker.Error()) return ticker;
     if (orders.Error()) return orders;
 
     const BtcPrice = ticker.Data.ticker[0];
-
-    const BtcPos = pos.Data.results[0]; // 仓位信息
-    const balanceBtc = balance.Data.BTC; // 账户余额 [可用余额, 订单冻结金额, 仓位保证金金额]
+    const BtcPos =
+      pos.Data.results && pos.Data.results[0]
+        ? pos.Data.results[0]
+        : ({
+            quantity: 0,
+            entry_price: 0,
+            direction: 'long',
+          } as any); // 仓位信息
+    const balanceBtc = balance.Data.BTC || [0, 0, 0]; // 账户余额 [可用余额, 订单冻结金额, 仓位保证金金额]
 
     const quantity = new BigNumber(BtcPos.quantity);
     // 【未实现盈亏】 （按照现价计算、系统给的是指数价格计算的结果）
@@ -68,12 +87,42 @@ export class GridService {
     const CurrentPos = (BtcPos.direction === 'long' ? 1 : -1) * BtcPos.quantity;
 
     const OutPut = {
+      Ts: Date.now(),
       p24h: new BigNumber(ticker.Data.ticker[9]).dividedBy(ticker.Data.ticker[10]).toNumber(),
       Price: BtcPrice,
-      BtcSum: BtcSum.toNumber(),
-      UsdSum: UsdSum.toNumber(),
+      BtcSum: BtcSum.toNumber() || 0,
+      UsdSum: UsdSum.toNumber() || 0,
       quantity: CurrentPos,
       WantPos,
+    };
+
+    // 执行成功
+    const Success = async () => {
+      const key = this.GetUserDatabaseDir(ks.Key);
+      const keyPath = `${key}/${DateFormat(Date.now(), 'yyyy/MM/dd')}.json`;
+      OssFileCache[key] = OssFileCache[key] || {};
+      if (OssFileCache[key].keyPath !== keyPath) {
+        OssFileCache[key] = {
+          data: [],
+          keyPath,
+          Saver: lodash.throttle((key: string, data: any) => {
+            this.oss.put(key, data, {});
+          }, 60000),
+        };
+
+        // 没有 路径，表明这个字段是首次建立，这里意味着是程序刚启动，所以需要加载oss文件数据，避免被覆盖
+        if (!OssFileCache[key].keyPath) {
+          const temp = await this.oss.get(keyPath);
+          OssFileCache[key].data = temp || [];
+        }
+      }
+      const cache = OssFileCache[key];
+      cache.data.push(OutPut);
+
+      // 因为执行太过频繁。这里保存数据有一定的延迟
+      cache.Saver(cache.keyPath, cache.data);
+
+      return new CodeObj(Code.Success, OutPut);
     };
 
     // 需要磨平的仓位
@@ -88,7 +137,7 @@ export class GridService {
         this.ctx.logger.info(process.pid, '撤单', cancel.Data);
       }
 
-      return new CodeObj(Code.Success, OutPut);
+      return Success();
     }
 
     let CreateOrder = true;
@@ -115,7 +164,11 @@ export class GridService {
     }
     if (CreateOrder) this.TakeOrder(ticker.Data, diffPos);
 
-    return new CodeObj(Code.Success, OutPut);
+    return Success();
+  }
+
+  private GetUserDatabaseDir(key: string) {
+    return `/report/` + MD5(`fmex-runner,${key}`);
   }
 
   private async TakeOrder(ticker: FMex.WsTickerRes, vol: number) {

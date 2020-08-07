@@ -6,6 +6,7 @@
     "no-non-null-assertion": false,
     "no-unused-expression": false,
     "callable-types": false,
+    "object-literal-key-quotes": false,
     "array-type": false
   }
 }

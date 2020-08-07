@@ -13,6 +13,7 @@ export class GridCron implements CommonSchedule {
 
   @inject('gridService')
   service: GridService;
+
   // 定时执行的具体任务
   async exec() {
     const res = await this.service.Run();

@@ -8,6 +8,13 @@ const UserConfig = {
     Key: '',
     Secret: '',
   },
+
+  AliOss: {
+    region: '',
+    accessKeyId: '',
+    accessKeySecret: '',
+    bucket: '',
+  },
 };
 try {
   const RealConfig = require('./user.config');

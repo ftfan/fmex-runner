@@ -8,4 +8,11 @@ module.exports = {
     Key: '',
     Secret: '',
   },
+
+  AliOss: {
+    region: '',
+    accessKeyId: '',
+    accessKeySecret: '',
+    bucket: '',
+  },
 };
