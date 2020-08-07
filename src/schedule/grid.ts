@@ -3,7 +3,7 @@ import { GridService } from '../service/grid';
 
 @provide()
 @schedule({
-  interval: '5s', // 20s 间隔
+  interval: '4s', // 20s 间隔
   type: 'worker', // 指定某一个 worker 执行
   immediate: true,
 })
