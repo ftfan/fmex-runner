@@ -29,10 +29,12 @@ const UserParams = {
   MinPosition: 1000,
   MaxPrice: 400,
   MaxPosition: -200,
-  AutoPrice: true,
   MaxStepVol: 100, // 每次下单最多不能超过该金额
-  OverStepChange: 3,
+  OverStepChange: 3, // 价差多少时，撤单。
   Runner: true,
+  BasePriceWeight: 1, // 基准价格权重，为1表示忽略24H均价。
+  BasePric: 11700, // 基准价格，中间价格
+  GridDiff: 0, // 设置偏移价格，0表示档位1；
 };
 
 const ks = UserConfig.KeySecret;
@@ -163,43 +165,49 @@ export class GridService {
     };
 
     // 需要磨平的仓位
-    const diffPos = WantPos - CurrentPos;
+    const diffPos = WantPos.map((item) => item - CurrentPos);
 
     // 持有仓位一致。无需变更
-    if (diffPos === 0) {
+    if (diffPos[0] === 0 && diffPos[1] === 0) {
       // 撤销目前已有的订单
       if (orders.Data.results.length) {
         const cancel = await fmex.CancelOrders(ks, BtcSymbol);
         if (cancel.Error()) return cancel;
         this.ctx.logger.info(process.pid, '撤单', cancel.Data);
       }
-
       return Success();
     }
 
-    let CreateOrder = true;
-
-    if (orders.Data.results.length) {
-      // 如果当前订单就在 买一/卖一 上挂着，就等着成交
-      const IsBuy = diffPos > 0;
-      const order = orders.Data.results.filter((item) => (IsBuy ? item.direction === 'long' : item.direction === 'short'))[0];
-      if (order) {
-        if (IsBuy) {
-          if (order.price - ticker.Data.ticker[2] < -UserParams.OverStepChange) {
-            fmex.CancelOrders(ks, BtcSymbol);
-          } else {
-            CreateOrder = false;
-          }
-        } else {
-          if (order.price - ticker.Data.ticker[4] > UserParams.OverStepChange) {
-            fmex.CancelOrders(ks, BtcSymbol);
-          } else {
-            CreateOrder = false;
-          }
-        }
+    // 符号相同。只保留一个
+    if (diffPos[0] * diffPos[1] > 1) {
+      if (diffPos[0] > 0) {
+        diffPos[1] = 0;
+      } else {
+        diffPos[0] = 0;
       }
     }
-    if (CreateOrder) this.TakeOrder(ticker.Data, diffPos);
+
+    const CancelOrders: number[] = [];
+    const CreateOrder = diffPos.map((item) => {
+      if (item === 0) return false;
+      if (!orders.Data.results.length) return item;
+      const IsBuy = item > 0;
+      orders.Data.results.forEach((order) => {
+        if (IsBuy && order.direction === 'long') {
+          if (ticker.Data.ticker[2] - UserParams.GridDiff - order.price > UserParams.OverStepChange) CancelOrders.push(order.id);
+        }
+        if (!IsBuy && order.direction === 'short') {
+          if (order.price - (ticker.Data.ticker[4] + UserParams.GridDiff) > UserParams.OverStepChange) CancelOrders.push(order.id);
+        }
+      });
+      return false;
+    });
+    CreateOrder.forEach((item) => {
+      if (item) this.TakeOrder(ticker.Data, item);
+    });
+    CancelOrders.forEach((item) => {
+      fmex.OrderCancel(ks, item);
+    });
 
     return Success();
   }
@@ -217,7 +225,7 @@ export class GridService {
         type: 'LIMIT',
         direction: IsBuy ? 'LONG' : 'SHORT',
         post_only: true,
-        price: IsBuy ? ticker.ticker[2] : ticker.ticker[4],
+        price: IsBuy ? ticker.ticker[2] - UserParams.GridDiff : ticker.ticker[4] + UserParams.GridDiff,
         quantity: Math.min(UserParams.MaxStepVol, Math.abs(vol)),
       });
       OrderReqCache[ks.Key] = null;
@@ -232,24 +240,21 @@ export class GridService {
    */
   private GetPricePosition(ticker: FMex.WsTickerRes) {
     const PriceDiff = new BigNumber(UserParams.MaxPrice).minus(UserParams.MinPrice); // 用户设置的价格范围
-    let MinPrice = new BigNumber(UserParams.MinPrice); // 用户设置的低价
-    // 以均价为准
-    if (UserParams.AutoPrice) {
-      const Price = new BigNumber(ticker.ticker[9]).dividedBy(ticker.ticker[10]); // 24小时均价
-      MinPrice = Price.plus(UserParams.MinPrice); // 当前下限价格。
-    }
-    const Diff = new BigNumber(ticker.ticker[0]).minus(MinPrice); // 当前价格，离最低价距离
-    let PricePosition = Diff.dividedBy(PriceDiff); // 当前价格处于用户设置范围的位置
 
-    const PricePositionNumber = PricePosition.toNumber();
-    // 限制范围只能在0-1内
-    if (PricePositionNumber < 0) {
-      PricePosition = Num0;
-    } else if (PricePositionNumber > 1) {
-      PricePosition = Num1;
-    }
+    const Price24H = new BigNumber(ticker.ticker[9]).dividedBy(ticker.ticker[10]); // 24小时均价
+    // 基准价格
+    const BasePrice = new BigNumber(UserParams.BasePric).multipliedBy(UserParams.BasePriceWeight).plus(Price24H.multipliedBy(Num1.minus(UserParams.BasePriceWeight)));
+
+    const MinPrice = BasePrice.plus(UserParams.MinPrice); // 用户设置的低价
+
+    const Diff = [new BigNumber(ticker.ticker[2]).minus(MinPrice), new BigNumber(ticker.ticker[4]).minus(MinPrice)]; // 当前价格，离最低价距离
+    const PricePosition = [BigNumber.min(Num1, BigNumber.max(Num0, Diff[0].dividedBy(PriceDiff))), BigNumber.min(Num1, BigNumber.max(Num0, Diff[1].dividedBy(PriceDiff)))]; // 当前价格处于用户设置范围的位置
+
     const PositionDiff = new BigNumber(UserParams.MinPosition).minus(UserParams.MaxPosition); // 用户持仓范围
-    const CurrentPricePosition = PositionDiff.multipliedBy(Num1.minus(PricePosition)).plus(UserParams.MaxPosition);
-    return Math.floor(CurrentPricePosition.toNumber());
+    const CurrentPricePosition = [
+      PositionDiff.multipliedBy(Num1.minus(PricePosition[0])).plus(UserParams.MaxPosition),
+      PositionDiff.multipliedBy(Num1.minus(PricePosition[1])).plus(UserParams.MaxPosition),
+    ];
+    return [Math.floor(CurrentPricePosition[0].toNumber()), Math.floor(CurrentPricePosition[1].toNumber())];
   }
 }

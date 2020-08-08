@@ -22,6 +22,7 @@ export class GridController {
       MaxStepVol: parseFloat(query.MaxStepVol),
       OverStepChange: parseFloat(query.OverStepChange),
       AutoPrice: query.AutoPrice === 'true',
+      BasePriceWeight: parseFloat(query.BasePriceWeight),
       Runner: query.Runner === 'true',
       Key: query.Key,
     };
