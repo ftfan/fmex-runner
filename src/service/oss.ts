@@ -25,9 +25,12 @@ export class OssService {
   }
 
   async get(fileUrl: string) {
-    // 必须今日的文件已经创建了（昨日的文件不会再被修改了）
-    const res = await Axios.get(AliUrl + fileUrl).catch((e) => Promise.resolve(e && e.response));
-    if (!res || res.status !== 200) return null;
-    return res.data;
+    try {
+      const res = await Axios.get(AliUrl + fileUrl).catch((e) => Promise.resolve(e && e.response));
+      if (!res || res.status !== 200) return null;
+      return res.data;
+    } catch (e) {
+      return null;
+    }
   }
 }

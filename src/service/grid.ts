@@ -40,6 +40,7 @@ const UserParams = {
 const ks = UserConfig.KeySecret;
 
 const OrderReqCache: any = {};
+const ReqPromise: any = {};
 const OssFileCache: any = {};
 const KeyInited: any = {};
 
@@ -128,19 +129,23 @@ export class GridService {
       const key = this.GetUserDatabaseDir(ks.Key);
       const keyPath = `${key}/${DateFormat(Date.now(), 'yyyy/MM/dd')}.json`;
       OssFileCache[key] = OssFileCache[key] || {};
+      if (ReqPromise[ks.Key]) await ReqPromise[ks.Key];
       if (OssFileCache[key].keyPath !== keyPath) {
-        // 没有 路径，表明这个字段是首次建立，这里意味着是程序刚启动，所以需要加载oss文件数据，避免被覆盖
-        if (!OssFileCache[key].keyPath) {
+        ReqPromise[ks.Key] = new Promise(async (resolve) => {
+          // 字段是首次建立，这里意味着是程序刚启动，所以需要加载oss文件数据，避免被覆盖
           const temp = await this.oss.get(keyPath);
-          OssFileCache[key].data = temp || [];
-        }
-        OssFileCache[key] = {
-          data: OssFileCache[key].data || [],
-          keyPath,
-          Saver: lodash.throttle((key: string, data: any) => {
-            this.oss.put(key, data, {});
-          }, 60000),
-        };
+          const newData = temp || [];
+
+          OssFileCache[key] = {
+            data: newData,
+            keyPath,
+            Saver: lodash.throttle((key: string, data: any) => {
+              this.oss.put(key, data, {});
+            }, 60000),
+          };
+          ReqPromise[ks.Key] = null;
+          resolve();
+        });
       }
       const cache = OssFileCache[key];
 
@@ -159,6 +164,14 @@ export class GridService {
       // 数据如果和上一次没有差别，就不保存了。有差异才保存
       if (!IsSameData()) {
         cache.data.push(OutPut);
+
+        // 临时修复缺陷数据
+        {
+          let tttt = Date.now();
+          tttt = tttt - (tttt % 86400000);
+          cache.data = cache.data.filter((item: any) => item.p24h >= tttt);
+        }
+
         // 因为执行太过频繁。这里保存数据有一定的延迟
         cache.Saver(cache.keyPath, cache.data);
       }
