@@ -203,9 +203,11 @@ export class GridService {
           }
         }
         if (!IsBuy && order.direction === 'short') {
-          if (order.price - (ticker.Data.ticker[4] + UserParams.GridDiff) > UserParams.OverStepChange) CancelOrders.push(order.id);
-        } else {
-          return false;
+          if (order.price - (ticker.Data.ticker[4] + UserParams.GridDiff) > UserParams.OverStepChange) {
+            CancelOrders.push(order.id);
+          } else {
+            return false;
+          }
         }
       });
       return item;
