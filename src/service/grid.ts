@@ -194,23 +194,25 @@ export class GridService {
       if (item === 0) return false;
       if (!orders.Data.results.length) return item;
       const IsBuy = item > 0;
+      let revert = true;
       orders.Data.results.forEach((order) => {
         if (IsBuy && order.direction === 'long') {
           if (ticker.Data.ticker[2] - UserParams.GridDiff - order.price > UserParams.OverStepChange) {
             CancelOrders.push(order.id);
           } else {
-            return false;
+            revert = false;
           }
         }
         if (!IsBuy && order.direction === 'short') {
           if (order.price - (ticker.Data.ticker[4] + UserParams.GridDiff) > UserParams.OverStepChange) {
             CancelOrders.push(order.id);
           } else {
-            return false;
+            revert = false;
           }
         }
       });
-      return item;
+      if (revert) return item;
+      return false;
     });
     CreateOrder.forEach((item) => {
       if (item) this.TakeOrder(ticker.Data, item);
