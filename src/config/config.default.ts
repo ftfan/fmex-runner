@@ -46,5 +46,10 @@ export default (appInfo: EggAppInfo) => {
     packages: ['~/fmex-runner/package.json'],
   };
 
+  config.cors = {
+    origin: '*',
+    allowMethods: 'GET,HEAD',
+  };
+
   return config;
 };

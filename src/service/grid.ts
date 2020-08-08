@@ -32,12 +32,14 @@ const UserParams = {
   AutoPrice: true,
   MaxStepVol: 100, // 每次下单最多不能超过该金额
   OverStepChange: 3,
+  Runner: true,
 };
 
 const ks = UserConfig.KeySecret;
 
 const OrderReqCache: any = {};
 const OssFileCache: any = {};
+const KeyInited: any = {};
 
 @provide('gridService')
 export class GridService {
@@ -47,7 +49,30 @@ export class GridService {
   @inject('ossService')
   oss: OssService;
 
+  // 设置参数
+  async SetParams(params: any) {
+    if (params.Key !== UserConfig.KeySecret.Key) return new CodeObj(Code.Error, null, 'Key 不匹配');
+    const key = this.GetUserDatabaseDir(ks.Key);
+    const keyPath = `${key}/config.json`;
+    const res = await this.oss.put(keyPath, params, {});
+    if (!res) return new CodeObj(Code.Error, null, '保存失败');
+    Object.assign(UserParams, params);
+    return new CodeObj(Code.Success);
+  }
+
+  async InitParams() {
+    const key = this.GetUserDatabaseDir(ks.Key);
+    const keyPath = `${key}/config.json`;
+    const res = await this.oss.get(keyPath);
+    if (!res) return new CodeObj(Code.Error, null, '用户未配置参数');
+    Object.assign(UserParams, res);
+    KeyInited[ks.Key] = true;
+    return new CodeObj(Code.Success, res);
+  }
+
   async Run() {
+    if (!KeyInited[ks.Key]) return this.InitParams();
+    if (!UserParams.Runner) return new CodeObj(Code.Error);
     const [pos, balance, ticker, orders] = await Promise.all([
       // 获取行情数据
       fmex.FetchPosition(ks),
