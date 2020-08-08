@@ -34,7 +34,7 @@ const UserParams = {
   Runner: true,
   BasePriceWeight: 1, // 基准价格权重，为1表示忽略24H均价。
   BasePric: 11700, // 基准价格，中间价格
-  GridDiff: 0, // 设置偏移价格，0表示档位1；
+  GridDiff: 0, // 设置偏移价格
 };
 
 const ks = UserConfig.KeySecret;

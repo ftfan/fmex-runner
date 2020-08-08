@@ -21,8 +21,9 @@ export class GridController {
       MaxPosition: parseFloat(query.MaxPosition),
       MaxStepVol: parseFloat(query.MaxStepVol),
       OverStepChange: parseFloat(query.OverStepChange),
-      AutoPrice: query.AutoPrice === 'true',
+      GridDiff: parseFloat(query.GridDiff), // 设置偏移价格
       BasePriceWeight: parseFloat(query.BasePriceWeight),
+      BasePrice: parseFloat(query.BasePrice),
       Runner: query.Runner === 'true',
       Key: query.Key,
     };
@@ -35,6 +36,9 @@ export class GridController {
     if (isNaN(params.MaxPosition)) return err();
     if (isNaN(params.MaxStepVol)) return err();
     if (isNaN(params.OverStepChange)) return err();
+    if (isNaN(params.BasePriceWeight)) return err();
+    if (isNaN(params.GridDiff)) return err();
+    if (isNaN(params.BasePrice)) return err();
     const res = await this.service.SetParams(params);
     this.ctx.body = res;
   }
