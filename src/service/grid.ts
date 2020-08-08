@@ -196,10 +196,16 @@ export class GridService {
       const IsBuy = item > 0;
       orders.Data.results.forEach((order) => {
         if (IsBuy && order.direction === 'long') {
-          if (ticker.Data.ticker[2] - UserParams.GridDiff - order.price > UserParams.OverStepChange) CancelOrders.push(order.id);
+          if (ticker.Data.ticker[2] - UserParams.GridDiff - order.price > UserParams.OverStepChange) {
+            CancelOrders.push(order.id);
+          } else {
+            return false;
+          }
         }
         if (!IsBuy && order.direction === 'short') {
           if (order.price - (ticker.Data.ticker[4] + UserParams.GridDiff) > UserParams.OverStepChange) CancelOrders.push(order.id);
+        } else {
+          return false;
         }
       });
       return item;
