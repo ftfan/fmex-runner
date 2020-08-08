@@ -169,7 +169,7 @@ export class GridService {
         {
           let tttt = Date.now();
           tttt = tttt - (tttt % 86400000);
-          cache.data = cache.data.filter((item: any) => item.p24h >= tttt);
+          cache.data = cache.data.filter((item: any) => item.Ts >= tttt);
         }
 
         // 因为执行太过频繁。这里保存数据有一定的延迟
