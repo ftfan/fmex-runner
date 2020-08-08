@@ -33,7 +33,7 @@ const UserParams = {
   OverStepChange: 3, // 价差多少时，撤单。
   Runner: true,
   BasePriceWeight: 1, // 基准价格权重，为1表示忽略24H均价。
-  BasePric: 11700, // 基准价格，中间价格
+  BasePrice: 11700, // 基准价格，中间价格
   GridDiff: 0, // 设置偏移价格
 };
 
@@ -243,9 +243,9 @@ export class GridService {
 
     const Price24H = new BigNumber(ticker.ticker[9]).dividedBy(ticker.ticker[10]); // 24小时均价
     // 基准价格
-    const BasePrice = new BigNumber(UserParams.BasePric).multipliedBy(UserParams.BasePriceWeight).plus(Price24H.multipliedBy(Num1.minus(UserParams.BasePriceWeight)));
+    const BasePrice = new BigNumber(UserParams.BasePrice).multipliedBy(UserParams.BasePriceWeight).plus(Price24H.multipliedBy(Num1.minus(UserParams.BasePriceWeight)));
 
-    const MinPrice = BasePrice.plus(UserParams.MinPrice); // 用户设置的低价
+    const MinPrice = BasePrice.minus(UserParams.BasePrice).plus(UserParams.MinPrice); // 用户设置的低价
 
     const Diff = [new BigNumber(ticker.ticker[2]).minus(MinPrice), new BigNumber(ticker.ticker[4]).minus(MinPrice)]; // 当前价格，离最低价距离
     const PricePosition = [BigNumber.min(Num1, BigNumber.max(Num0, Diff[0].dividedBy(PriceDiff))), BigNumber.min(Num1, BigNumber.max(Num0, Diff[1].dividedBy(PriceDiff)))]; // 当前价格处于用户设置范围的位置
