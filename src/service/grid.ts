@@ -147,11 +147,13 @@ export class GridService {
       const IsSameData = () => {
         const last = cache.data[cache.data.length - 1];
         if (!last) return false;
-        const keys = ['p24h', 'Price', 'BtcSum', 'UsdSum', 'quantity', 'WantPos'];
+        const keys = ['p24h', 'Price', 'BtcSum', 'UsdSum', 'quantity'];
         for (const i in keys) {
           const val = keys[i];
           if (OutPut[val] !== last[val]) return false;
         }
+        if (OutPut.WantPos[0] !== last.WantPos[0]) return false;
+        if (OutPut.WantPos[1] !== last.WantPos[1]) return false;
         return true;
       };
       // 数据如果和上一次没有差别，就不保存了。有差异才保存
@@ -200,7 +202,7 @@ export class GridService {
           if (order.price - (ticker.Data.ticker[4] + UserParams.GridDiff) > UserParams.OverStepChange) CancelOrders.push(order.id);
         }
       });
-      return false;
+      return item;
     });
     CreateOrder.forEach((item) => {
       if (item) this.TakeOrder(ticker.Data, item);
