@@ -112,7 +112,7 @@ export namespace FMex {
     }
 
     async CreateOrder(ks: KeySecret, body: any) {
-      body.affiliate_code = 'nyxw3g';
+      body.affiliate_code = 'roj5ek';
       return this.api.post(`/v3/contracts/orders`, body, { headers: { 'FC-ACCESS-KEY': ks.Key, 'FC-ACCESS-SECRET': ks.Secret } }).then((res) => res.data as CodeObj<any>);
     }
 
